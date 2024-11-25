@@ -59,11 +59,15 @@ export class ProductEntity {
     @Column('text')
     gender: string;
 
+    @Column('text', { array: true, default: [] })
+    tags: string[];
+
 
     @BeforeInsert()
     checkSluginsert() {
 
         this.title = this.title.toLowerCase();
+        this.tags = this.tags.map(tag => tag.toLowerCase());
 
         if( !this.slug){
             this.slug = this.title.replaceAll(' ', '_').replaceAll("'", '');
@@ -85,6 +89,9 @@ export class ProductEntity {
       
         if ( this.slug ) 
             this.slug = this.slug.toLowerCase().replaceAll(' ', '_').replaceAll("'", '');
+
+        if ( this.tags ) 
+            this.tags = this.tags.map(tag => tag.toLowerCase());
       
     }
 
