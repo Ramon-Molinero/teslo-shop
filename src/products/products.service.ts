@@ -417,6 +417,7 @@ export class ProductsService {
   private _handleDBError(error: any) {
 
     if (error.code === '23505') {
+      // Si lanzo un error de clave duplicada y tengo varios elementos, este error.detail me da la clave duplicada y detiene el proceso
       throw new BadRequestException(error.detail);
     }
     
