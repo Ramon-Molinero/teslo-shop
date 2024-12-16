@@ -36,7 +36,7 @@ export class AuthService {
 
       return {
         ...user,
-        token: this.getJwtToken({ email: user.email })
+        token: this._getJwtToken({ id: user.id })
       };
 
     } catch (error) {
@@ -46,39 +46,31 @@ export class AuthService {
   }
 
   async login(loginUserDto: LoginUserDto) {
-    
+
     const { email, password } = loginUserDto;
 
-    try {
-      const user = await this.userRepository.findOne({ 
-        where: { email },
-        select: { email: true, password: true }
-        // select: ['email', 'password']
-       });
-
-      if(!user) throw new UnauthorizedException('Invalid credentials email');
-
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-
-      if(!isPasswordValid) throw new BadRequestException('Invalid credentials password');
-
-      delete user.password;
-
-
-      return {
-        ...user,
-        token: this.getJwtToken({ email: user.email })
-      };
+    const user = await this.userRepository.findOne({ 
+      where: { email },
+      select: ['email', 'password', 'id']
+     });
+    
+     if(!user) throw new UnauthorizedException('Invalid credentials email');
+    
+     const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+     if(!isPasswordValid) throw new BadRequestException('Invalid credentials password');
+    
+     delete user.password;
+    
+     return {
+      ...user,
+      // id: user.id,
+      token: this._getJwtToken({ id: user.id })
+    };
       
-    } catch (error) {
-      
-      this._handleError(error);
-      
-    }
-
   }
 
-  private getJwtToken( payload: JwtPayload){
+  private _getJwtToken( payload: JwtPayload){
     const token = this.jwtService.sign(payload);
     return token;
   }
