@@ -9,6 +9,7 @@ import { IncomingHttpHeaders } from 'http';
 import { UserRoleGuard } from './guards/user-role/user-role.guard';
 import { RoleProtected } from './decorators/role-protected.decorator';
 import { ValidRoles } from './interfaces';
+import { Auth } from './decorators/auth.decorator';
 
 
 
@@ -53,6 +54,18 @@ export class AuthController {
   @RoleProtected( ValidRoles.admin, ValidRoles.superUser )
   @UseGuards( AuthGuard(), UserRoleGuard )
   privateRoute2(
+    @GetUserDecorator() user: User
+  ){
+    return {
+      ok: true,
+      message: 'This is a private route',
+      user
+    }
+  }
+
+  @Get('private3')
+  @Auth( ValidRoles.admin )
+  privateRoute3(
     @GetUserDecorator() user: User
   ){
     return {
