@@ -250,40 +250,42 @@ export class ProductsService {
 
   /**
     * @author R.M
-    * @version 1.0
+    * @version 1.1
     *
-    * @param {string} id - El identificador único del producto a actualizar.
+    * @param {string} id - Identificador único del producto a actualizar.
     * @param {UpdateProductDto} updateProductDto - DTO que contiene los datos a actualizar del producto, incluyendo posibles imágenes asociadas.
     *
     * @description
-    * Este método actualiza un producto existente en la base de datos, manejando transacciones para garantizar la consistencia de los datos. 
-    * Los pasos son los siguientes:
+    * Este método actualiza un producto existente en la base de datos, utilizando transacciones para garantizar la consistencia de los datos. 
+    * Incluye pasos para manejar las relaciones de imágenes y asegurar que el producto actualizado se devuelva con todos sus datos relacionados.
     *
     * 1. **Crear QueryRunner**:
-    *    - Se crea un `QueryRunner` para gestionar la transacción y garantizar la consistencia de los datos.
-    *    - Se conecta el `QueryRunner` y se inicia una transacción.
+    *    - Se crea un `QueryRunner` para gestionar la transacción.
+    *    - Se conecta el `QueryRunner` y se inicia la transacción.
     *
     * 2. **Precargar Producto**:
-    *    - Utiliza el método `preload` del repositorio para precargar los datos actuales del producto junto con los datos nuevos.
-    *    - Si no se encuentra el producto, lanza una excepción `BadRequestException`.
+    *    - Se utiliza el método `preload` del repositorio para cargar los datos actuales del producto y combinarlos con los nuevos datos.
+    *    - Si el producto no se encuentra, lanza una excepción `BadRequestException`.
     *
     * 3. **Actualizar Imágenes**:
-    *    - Si `images` está presente en los datos de actualización:
-    *      - Elimina las imágenes asociadas al producto desde el gestor del `QueryRunner`.
-    *      - Asocia las nuevas imágenes, transformándolas en entidades de tipo `ProductImage`.
+    *    - Si `images` está presente:
+    *      - Se eliminan las imágenes asociadas al producto utilizando el gestor del `QueryRunner`.
+    *      - Se asignan nuevas imágenes, transformándolas en entidades de tipo `ProductImage`.
     *
     * 4. **Guardar Producto**:
-    *    - Guarda el producto actualizado junto con sus relaciones utilizando el gestor del `QueryRunner`.
+    *    - Se guarda el producto actualizado junto con las nuevas relaciones utilizando el gestor del `QueryRunner`.
+    *    - La transacción se confirma (`commitTransaction`) y se libera el `QueryRunner`.
     *
-    * 5. **Finalizar Transacción**:
-    *    - Si todo se ejecuta correctamente, se confirma la transacción (`commitTransaction`) y se libera el `QueryRunner`.
+    * 5. **Recuperar Producto Actualizado**:
+    *    - Después de guardar, se realiza una consulta para recuperar el producto actualizado junto con las relaciones de imágenes.
+    *    - Las imágenes se transforman para devolver solo sus URLs.
     *
     * 6. **Manejo de Errores**:
-    *    - Si ocurre un error en cualquier punto del proceso, el método `_handleDBError` se encarga de manejar la excepción.
+    *    - Si ocurre un error durante el proceso, la transacción se revierte (`rollbackTransaction`) y el método `_handleDBError` gestiona la excepción.
     *
     * @returns {Promise<ProductEntity>} - El producto actualizado, incluyendo las URLs de las imágenes asociadas.
     *
-    * @throws {rollbackTransaction} Si ocurre un error durante la transacción, se revierte la operación y se lanza una excepción.
+    * @throws {rollbackTransaction} Si ocurre un error durante la transacción, se revierte la operación.
     * @throws {BadRequestException} Si el producto no existe o los datos proporcionados son inválidos.
     * @throws {InternalServerErrorException} Si ocurre un error inesperado durante la operación.
     */
@@ -316,9 +318,13 @@ export class ProductsService {
       await queryRunner.manager.save(product);
       await queryRunner.commitTransaction();
       await queryRunner.release();
-      // await this._productRepository.save(product);      
-
-      return { ...product, images: product.images.map( image => image.url ) };
+      
+      const productWithImages = await this._productRepository.findOne({
+        where: { id: product.id },
+        relations: { images: true },
+      });
+      
+      return { ...productWithImages, images: productWithImages.images.map( image => image.url ) };
       
     } catch (error) {
 
