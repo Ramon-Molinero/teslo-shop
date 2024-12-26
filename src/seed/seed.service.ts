@@ -1,88 +1,103 @@
 import { Injectable } from '@nestjs/common';
 import { ProductsService } from 'src/products/products.service';
 import { initialData } from './data/data';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/auth/entities/user.entity';
+import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt'
 
 
 @Injectable()
 export class SeedService {
 
+  /**
+    * @author R.M
+    * @version 1.1
+    *
+    * @param {ProductsService} _productsService - Servicio para gestionar productos en la base de datos.
+    * @param {Repository<User>} _userRepository - Repositorio de TypeORM asociado a la entidad `User`.
+    *
+    * @description
+    * El constructor inicializa los servicios y repositorios necesarios para manejar las operaciones de datos de productos y usuarios.
+    * - **`_productsService`**: Gestiona la lógica de negocio y acceso a datos para productos.
+    * - **`_userRepository`**: Gestiona la interacción con la base de datos para los usuarios.
+    */
+
   constructor(
-    private readonly _productsService: ProductsService
+    private readonly _productsService: ProductsService,
+    @InjectRepository( User ) private readonly _userRepository: Repository<User>,
+    private readonly jwtService: JwtService
   ) {}
   
 
+
   /**
     * @author R.M
-    * @version 1.0
+    * @version 1.1
     * 
     * @description
-    * Este método `createSeed` gestiona el proceso de inicialización de datos semilla en la base de datos.
-    * Llama a un método interno para crear los productos iniciales y retorna un mensaje de confirmación al completar el proceso.
+    * Este método inicializa los datos de semilla en la base de datos. Realiza las siguientes operaciones:
     * 
-    * ### Pasos de Ejecución
+    * 1. **Eliminar Tablas Existentes**:
+    *    - Llama al método `_deleteTables` para limpiar las tablas de productos y usuarios.
     * 
-    * 1. **Crear Productos Semilla**:
-    *    - Llama al método privado `_createProducts2` para gestionar la creación de los productos iniciales en la base de datos.
+    * 2. **Insertar Usuarios**:
+    *    - Llama al método `_insertUsers` para insertar los usuarios iniciales y devuelve el usuario administrador.
     * 
-    * 2. **Retornar Confirmación**:
-    *    - Retorna el mensaje `'Seed created'` para indicar que los datos de semilla se han creado correctamente.
+    * 3. **Insertar Productos**:
+    *    - Llama al método `_createProducts2`, utilizando el usuario administrador como referencia.
     * 
-    * @returns {Promise<string>} - Un mensaje de confirmación indicando que los datos de semilla se han creado.
+    * 4. **Retornar Confirmación**:
+    *    - Devuelve un mensaje indicando que el proceso de semilla se completó correctamente.
     * 
-    * @throws {Error} - Si ocurre algún error durante el proceso de inicialización de datos, este se manejará dentro de los métodos llamados.
+    * @returns {Promise<string>} - Mensaje de confirmación indicando que la semilla se ejecutó correctamente.
     */
-   
+
   async createSeed() {
-    await this._createProducts2();
+    this._deleteTables();
+    const adminUser = await this._insertUsers();
+    await this._createProducts2(adminUser);
     
-    return 'Seed created';
+    return 'Seed executed';
   }
 
 
 
-
   /**
     * @author R.M
-    * @version 1.0
+    * @version 1.1
     * 
     * @private
     * 
+    * @param {User} user - Usuario administrador que será asociado a los productos creados.
+    * 
     * @description
-    * Este método privado `_createProducts` gestiona el proceso de inicialización de productos en la base de datos. 
-    * Se encarga de eliminar los productos existentes y luego insertar una lista de productos iniciales (semillas).
+    * Inserta productos iniciales (semillas) en la base de datos, siguiendo estos pasos:
     * 
-    * ### Pasos de Ejecución
+    * 1. **Obtener Datos de Semilla**:
+    *    - Recupera los productos iniciales desde `initialData.products`.
     * 
-    * 1. **Eliminar Productos Existentes**:
-    *    - Llama al método `deleteAllProducts` del servicio de productos (`_productsService`) para limpiar la base de datos antes de insertar los productos iniciales.
+    * 2. **Crear Promesas de Inserción**:
+    *    - Itera sobre los productos y agrega promesas al array `insertPromises` llamando al método `create` del servicio de productos.
     * 
-    * 2. **Preparar Datos de Semilla**:
-    *    - Recupera la lista de productos iniciales desde `initialData.products`.
+    * 3. **Ejecutar Inserciones**:
+    *    - Ejecuta todas las inserciones concurrentemente usando `Promise.all`.
     * 
-    * 3. **Crear Promesas de Inserción**:
-    *    - Itera sobre los productos iniciales utilizando `forEach` y agrega una promesa al array `insertPromises` para cada producto, llamando al método `create` del servicio de productos.
+    * 4. **Confirmar Operación**:
+    *    - Imprime en consola el número de productos creados y devuelve `true` al completar el proceso.
     * 
-    * 4. **Ejecutar Inserciones Concurrentemente**:
-    *    - Utiliza `Promise.all` para ejecutar todas las promesas de inserción de manera concurrente.
-    *    - Al completar las inserciones, imprime en la consola la cantidad de productos creados.
-    * 
-    * 5. **Retornar Resultado**:
-    *    - Devuelve un valor booleano (`true`) para indicar que el proceso de inicialización de productos se completó con éxito.
-    * 
-    * @returns {Promise<boolean>} - Indica que el proceso de inicialización de productos ha finalizado con éxito.
-    * 
-    * @throws {Error} - Cualquier error durante el proceso de eliminación o creación se manejará dentro de los métodos correspondientes.
+    * @returns {Promise<boolean>} - Indica que los productos se insertaron correctamente.
     */
-   
-  private async _createProducts() {
-    await this._productsService.deleteAllProducts();
 
+  private async _createProducts( user: User ) {
+    
     const seedProducts = initialData.products;
 
     const insertPromises = [];
 
     seedProducts.forEach(product => {
-      insertPromises.push( this._productsService.create(product) );
+      insertPromises.push( this._productsService.create(product, user) );
     });
 
     const result = await Promise.all(insertPromises);
@@ -95,44 +110,43 @@ export class SeedService {
 
 
 
-  /**
+
+    /**
     * @author R.M
-    * @version 1.0
+    * @version 1.1
     * 
     * @private
     * 
+    * @param {User} user - Usuario administrador que será asociado a los productos creados.
+    * 
     * @description
-    * Este método privado `_createProducts2` se encarga de insertar una lista de productos iniciales (semillas) en la base de datos.
-    * La lógica sigue los siguientes pasos:
+    * Inserta productos iniciales en la base de datos, manejando errores de inserción individualmente.
     * 
-    * 1. **Obtener Datos de Semilla**:
-    *    - Recupera los datos iniciales de productos desde `initialData.products`.
+    * ### Pasos
     * 
-    * 2. **Procesar e Insertar Productos**:
-    *    - Itera sobre los productos iniciales y utiliza el método `create` del servicio de productos (`_productsService`) para intentar insertar cada producto.
-    *    - Si un producto se inserta correctamente, se añade a un array de promesas (`insertPromises`).
-    *    - Si ocurre un error durante la inserción de un producto, se registra en la consola utilizando `console.warn` sin interrumpir el proceso.
+    * 1. **Obtener Productos Semilla**:
+    *    - Recupera los datos iniciales de `initialData.products`.
     * 
-    * 3. **Esperar Inserción de Todos los Productos**:
-    *    - Utiliza `Promise.all` para esperar a que todas las promesas de inserción se completen.
-    *    - Calcula la cantidad de productos creados e imprime el resultado en la consola.
+    * 2. **Insertar Productos**:
+    *    - Itera sobre los productos y utiliza el servicio de productos para insertarlos.
+    *    - Si ocurre un error en un producto, registra el error en consola pero no detiene el proceso.
     * 
-    * 4. **Retornar Resultado**:
-    *    - Devuelve un valor booleano (`true`) para indicar que el proceso de inserción ha finalizado.
+    * 3. **Confirmar Inserciones**:
+    *    - Imprime la cantidad de productos creados en la consola.
     * 
-    * @returns {Promise<boolean>} - Indica que el proceso de inserción de productos ha finalizado con éxito.
-    * 
-    * @throws {Error} - Registra cualquier error encontrado durante la inserción en la consola, pero no detiene el proceso de inserción.
+    * @returns {Promise<boolean>} - Indica que las inserciones de productos finalizaron correctamente.
     */
+
    
-  private async _createProducts2() {
+  private async _createProducts2( user: User ) {
+   
     const seedProducts = initialData.products;
 
     const insertPromises = [];
 
     for (const product of seedProducts) {
       try {
-        const productSeed = await this._productsService.create(product)
+        const productSeed = await this._productsService.create(product, user)
         
         if( productSeed ) 
           insertPromises.push( productSeed );
@@ -148,5 +162,85 @@ export class SeedService {
     console.log('Products created:', result.length);
 
     return true;
+  }
+
+
+
+  /**
+    * @author R.M
+    * @version 1.2
+    * 
+    * @private
+    * 
+    * @description
+    * Inserta usuarios iniciales en la base de datos a partir de los datos proporcionados en `initialData.users`.
+    * 
+    * ### Pasos:
+    * 
+    * 1. **Preparar Usuarios**:
+    *    - Itera sobre los datos iniciales, separando las contraseñas y generando su hash utilizando `bcrypt`.
+    *    - Crea entidades de usuarios con los datos restantes y la contraseña cifrada.
+    * 
+    * 2. **Guardar Usuarios en la Base de Datos**:
+    *    - Inserta las entidades creadas en la base de datos utilizando el método `save` del repositorio.
+    * 
+    * 3. **Retornar Usuario Administrador**:
+    *    - Devuelve el primer usuario creado (generalmente el administrador) para su uso posterior.
+    * 
+    * ### Seguridad:
+    * - Las contraseñas se cifran antes de guardar los usuarios en la base de datos.
+    * 
+    * @returns {Promise<User>} - El usuario administrador creado.
+    * 
+    * @throws {InternalServerErrorException} - Si ocurre algún error inesperado durante la creación o el guardado de usuarios.
+    */
+
+  private async _insertUsers() {
+
+    const seedUsers = initialData.users;
+
+    const users: User[] = [];
+
+    for (const user of seedUsers) {
+      
+      let { password, ...rest } = user;
+      password = await bcrypt.hashSync( password, 10 );
+      
+      users.push( this._userRepository.create({ ...rest, password }) );
+    }
+
+    const dbUser = await this._userRepository.save(users);
+
+    return dbUser[0];
+  }
+
+
+
+
+  /**
+    * @author R.M
+    * @version 1.0
+    * 
+    * @private
+    * 
+    * @description
+    * Limpia las tablas de productos y usuarios en la base de datos.
+    * 
+    * 1. **Eliminar Productos**:
+    *    - Llama al método `deleteAllProducts` del servicio de productos para eliminar todos los registros.
+    * 
+    * 2. **Eliminar Usuarios**:
+    *    - Utiliza un `QueryBuilder` para eliminar todos los registros en la tabla de usuarios.
+    * 
+    * @returns {Promise<void>} - Indica que la operación se completó.
+    */
+
+  private async _deleteTables() {
+    await this._productsService.deleteAllProducts();
+
+    const queryBuilder = this._userRepository.createQueryBuilder();
+    await queryBuilder.delete()
+      .where({}) // Elimina todos los registros
+      .execute();
   }
 }
