@@ -10,6 +10,7 @@ import { UserRoleGuard } from './guards/user-role/user-role.guard';
 import { RoleProtected } from './decorators/role-protected.decorator';
 import { ValidRoles } from './interfaces';
 import { Auth } from './decorators/auth.decorator';
+import { UUID } from 'typeorm/driver/mongodb/bson.typings';
 
 
 
@@ -73,6 +74,14 @@ export class AuthController {
       message: 'This is a private route',
       user
     }
+  }
+
+  @Get('check-auth-status')
+  @Auth()
+  checkAuthStatus(
+    @GetUserDecorator() user: User
+  ){
+    return this.authService.checkAuthStatus(user);
   }
 
  

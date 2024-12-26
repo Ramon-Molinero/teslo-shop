@@ -8,12 +8,13 @@ import { User } from './entities/user.entity';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { JwtPayload } from './interfaces';
 import { JwtService } from '@nestjs/jwt';
+import { UUID } from 'typeorm/driver/mongodb/bson.typings';
 
 
 
 @Injectable()
 export class AuthService {
-
+  
 
   constructor(
     @InjectRepository(User)
@@ -43,6 +44,16 @@ export class AuthService {
       this._handleError(error);
       
     }
+  }
+
+  async checkAuthStatus(user: User) {
+    
+
+    return {
+      ...user,
+      token: this._getJwtToken({ id: user.id })
+    }
+    
   }
 
   async login(loginUserDto: LoginUserDto) {
