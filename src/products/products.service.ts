@@ -8,6 +8,7 @@ import { ProductEntity } from './entities/product.entity';
 import { isUUID } from 'class-validator';
 import { PaginationDTO } from 'src/common/dto/pagination.dto';
 import { ProductImage } from './entities/images.entity';
+import { User } from 'src/auth/entities/user.entity';
 
 @Injectable()
 export class ProductsService {
@@ -16,40 +17,26 @@ export class ProductsService {
 
 
 
+
   /**
-    * @constructor
-    * 
-    * @param {Repository<ProductEntity>} _productRepository - El repositorio de TypeORM asociado a la entidad `ProductEntity`.
-    * @param {Repository<ProductImage>} _productImageRepository - El repositorio de TypeORM asociado a la entidad `ProductImage`.
-    * @param {DataSource} _dataSource - La instancia de TypeORM `DataSource` utilizada para operaciones avanzadas como transacciones y consultas personalizadas.
-    * 
-    * @description
-    * Este constructor utiliza la inyección de dependencias para acceder a los repositorios de las entidades `ProductEntity` y `ProductImage`, así como a la fuente de datos global.
-    * 
-    * **Repositorios:**
-    * Los repositorios proporcionan métodos para interactuar con la base de datos, tales como:
-    * 
-    * **Para `ProductEntity`:**
-    * - **find**: Recuperar múltiples registros.
-    * - **findOne**: Recuperar un registro único basado en ciertos criterios.
-    * - **save**: Insertar o actualizar registros.
-    * - **remove**: Eliminar registros.
-    * - **preload**: Cargar un objeto con nuevas propiedades basadas en un registro existente.
-    * 
-    * **Para `ProductImage`:**
-    * - **find**: Recuperar imágenes asociadas a productos.
-    * - **findOne**: Recuperar una imagen específica basada en ciertos criterios.
-    * - **save**: Insertar o actualizar imágenes en la base de datos.
-    * - **remove**: Eliminar imágenes de la base de datos.
-    * 
-    * **Fuente de datos (`_dataSource`):**
-    * La `DataSource` permite realizar operaciones avanzadas en la base de datos, tales como:
-    * - Crear y manejar transacciones con `createQueryRunner`.
-    * - Ejecutar consultas SQL personalizadas con `query`.
-    * - Acceso directo al gestor de entidades con `manager`.
-    * 
-    * La inyección de los repositorios y la fuente de datos se realiza mediante el decorador `@InjectRepository` y la configuración de TypeORM, que asocia automáticamente las clases `ProductEntity` y `ProductImage` con sus respectivos repositorios.
-    */
+  * @constructor
+  * 
+  * @param {Repository<ProductEntity>} _productRepository - El repositorio de TypeORM asociado a la entidad `ProductEntity`.
+  * @param {Repository<ProductImage>} _productImageRepository - El repositorio de TypeORM asociado a la entidad `ProductImage`.
+  * @param {DataSource} _dataSource - La instancia de TypeORM `DataSource` utilizada para operaciones avanzadas como transacciones y consultas personalizadas.
+  * 
+  * @description
+  * Inicializa los repositorios y el `DataSource` necesarios para las operaciones de la base de datos:
+  * 
+  * **Repositorios:**
+  * - Facilitan las operaciones CRUD para las entidades `ProductEntity` y `ProductImage`.
+  * 
+  * **Fuente de Datos (`_dataSource`):**
+  * - Proporciona métodos avanzados para transacciones, consultas personalizadas y manejo directo de entidades.
+  * 
+  * La inyección se realiza con el decorador `@InjectRepository` y la configuración global de TypeORM.
+  */
+
   
   constructor(
     @InjectRepository(ProductEntity)
@@ -94,13 +81,15 @@ export class ProductsService {
     * @throws {InternalServerErrorException} Si ocurre un error inesperado durante la creación del producto.
     */
   
-  async create(createProductDto: CreateProductDto) {
+  async create(createProductDto: CreateProductDto, user: User) {
 
     const { images = [], ...productDetails } = createProductDto;
 
     try {
+      
       const product = this._productRepository.create({
         ...productDetails,
+        user,
         images: images.map(image => this._productImageRepository.create( { url: image } ) )
       });
       await this._productRepository.save(product);
@@ -290,7 +279,7 @@ export class ProductsService {
     * @throws {InternalServerErrorException} Si ocurre un error inesperado durante la operación.
     */
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
+  async update(id: string, updateProductDto: UpdateProductDto, user: User) {
    
     const { images , ...toUpdate } = updateProductDto;
 
@@ -315,6 +304,7 @@ export class ProductsService {
         product.images = images.map( image => this._productImageRepository.create( { url: image } ) );
       }
 
+      product.user = user;
       await queryRunner.manager.save(product);
       await queryRunner.commitTransaction();
       await queryRunner.release();

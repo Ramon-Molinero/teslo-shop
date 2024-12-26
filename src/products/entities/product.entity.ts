@@ -1,5 +1,6 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ProductImage } from "./images.entity";
+import { User } from "src/auth/entities/user.entity";
 
 /**
   * @author R.M
@@ -77,22 +78,29 @@ export class ProductEntity {
     @OneToMany(
         () => ProductImage, 
         (image) => image.product, 
-        { cascade: true, eager: true }
+        { eager: true, cascade: true }
     )
-
     images?: ProductImage[];
+
+    @ManyToOne(
+        () => User, // entidad relacionada
+        (user) => user.product, // campo de la relación
+        { eager: true, cascade: true } // acción de eliminación 
+    )
+    user: User;
 
 
     @BeforeInsert()
-    checkSluginsert() {
+    checkProductInsert() {
 
         this.title = this.title.toLowerCase();
-        this.tags = this.tags.map(tag => tag.toLowerCase());
 
-        if( !this.slug){
+        if ( this.tags ) 
+            this.tags = this.tags.map(tag => tag.toLowerCase());
+        
+        if( !this.slug)
             this.slug = this.title.replaceAll(' ', '_').replaceAll("'", '');
-          }
-
+           
         this.slug = this.slug.toLowerCase()
         .replaceAll(' ', '_')
         .replaceAll("'", '');
@@ -112,7 +120,8 @@ export class ProductEntity {
 
         if ( this.tags ) 
             this.tags = this.tags.map(tag => tag.toLowerCase());
-      
+
+          
     }
 
 }

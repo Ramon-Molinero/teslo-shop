@@ -39,5 +39,6 @@ export class CreateProductDto {
 
     @IsOptional()
     images?: string[];
+    
 
 }
