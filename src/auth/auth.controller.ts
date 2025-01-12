@@ -1,29 +1,37 @@
-import { Controller, Post, Body, Get, UseGuards, Req, Headers, SetMetadata } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { CreateUserDto, LoginUserDto } from './dto';
+import { Controller, Post, Body, Get, UseGuards, Headers } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { GetUserDecorator } from './decorators/getUser.decorator';
-import { User } from './entities/user.entity';
-import { RawHeadersDecorator } from './decorators/rawHeaders.decorator';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IncomingHttpHeaders } from 'http';
-import { UserRoleGuard } from './guards/user-role/user-role.guard';
-import { RoleProtected } from './decorators/role-protected.decorator';
+
+import { Auth, RoleProtected, RawHeadersDecorator, GetUserDecorator } from './decorators';
+import { CreateUserDto, LoginUserDto } from './dto';
+
+import { AuthService } from './auth.service';
+import { User } from './entities/user.entity';
 import { ValidRoles } from './interfaces';
-import { Auth } from './decorators/auth.decorator';
-import { UUID } from 'typeorm/driver/mongodb/bson.typings';
 
+import { UserRoleGuard } from './guards/user-role/user-role.guard';
 
-
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @ApiOperation({ summary: 'Register User' })
+  @ApiResponse({ status: 201, description: 'User was created', type: User })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.authService.create(createUserDto);
   }
 
   @Post('login')
+  @ApiOperation({ summary: 'Login User' })
+  @ApiResponse({ status: 201, description: 'User logged in', type: User })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   login(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login(loginUserDto);
   }
@@ -89,6 +97,10 @@ export class AuthController {
     */
 
   @Get('private')
+  @ApiOperation({ summary: 'Private Route' })
+  @ApiResponse({ status: 201, description: 'Private Route' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   @UseGuards( AuthGuard() )
   testingPrivateRoute(
     // @Req() req: Express.Request,
@@ -164,6 +176,11 @@ export class AuthController {
     */
    
   @Get('private2')
+  @ApiOperation({ summary: 'Private Route 2' })
+  @ApiResponse({ status: 201, description: 'Private Route 2' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   @RoleProtected( ValidRoles.admin, ValidRoles.superUser )
   @UseGuards( AuthGuard(), UserRoleGuard )
   privateRoute2(
@@ -225,6 +242,11 @@ export class AuthController {
     */
    
   @Get('private3')
+  @ApiOperation({ summary: 'Private Route 3' })
+  @ApiResponse({ status: 201, description: 'Private Route 3' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   @Auth( ValidRoles.admin )
   privateRoute3(
     @GetUserDecorator() user: User
@@ -279,6 +301,10 @@ export class AuthController {
     */
    
   @Get('check-auth-status')
+  @ApiOperation({ summary: 'Check Auth Status' })
+  @ApiResponse({ status: 201, description: 'Check Auth Status' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   @Auth()
   checkAuthStatus(
     @GetUserDecorator() user: User

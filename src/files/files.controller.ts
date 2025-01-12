@@ -1,6 +1,8 @@
 import { BadRequestException, Controller, Get, Param, Post, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
 import { diskStorage } from 'multer';
 import { Response } from 'express';
 
@@ -8,7 +10,7 @@ import { FilesService } from './files.service';
 import { fileFilter } from './helpers/fileFilter.helper';
 import { renameFile } from './helpers/rename.helper';
 
-
+@ApiTags('Files - Get And Upload')
 @Controller('files')
 export class FilesController {
 
@@ -67,6 +69,10 @@ export class FilesController {
     */
    
   @Post('product')
+  @ApiOperation({ summary: 'Upload Product File' })
+  @ApiResponse({ status: 201, description: 'Product file uploaded', type: Object })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   @UseInterceptors( 
     FileInterceptor( 'file', { 
       fileFilter: fileFilter,
@@ -113,6 +119,11 @@ export class FilesController {
     */
    
   @Get('product/:imageName')
+  @ApiOperation({ summary: 'Get Product File' })
+  @ApiResponse({ status: 201, description: 'Product file found' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'File not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   findProductFiles(
     @Res() res: Response,
     @Param('imageName') imageName: string

@@ -1,5 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { ProductEntity } from "./product.entity";
+import { ApiProperty } from "@nestjs/swagger";
 
 /**
   * @class ProductImage
@@ -29,12 +30,25 @@ import { ProductEntity } from "./product.entity";
 @Entity()
 export class ProductImage{
     
+    @ApiProperty({
+        example: '1d7d0d3b-7c4b-4f5f-8c3c-0e1d7f4e6c8b',
+        description: 'Unique identifier as UUID',
+        uniqueItems: true,
+    })
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
+    @ApiProperty({
+        example: 'https://example.com/image.jpg',
+        description: 'Image URL',
+    })
     @Column('text')
     url: string;
 
+    @ApiProperty({
+        type: () => ProductEntity,
+        description: 'Product associated with the image',
+    })
     @ManyToOne( 
         () => ProductEntity, 
         (product) => product.images,
