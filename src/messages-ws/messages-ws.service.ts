@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
 
+
 interface ConnectedClients{
     [id: string]: Socket;
 }
@@ -21,5 +22,6 @@ export class MessagesWsService {
     getConnectedClients(): string[]{
         return Object.keys(this.connectedClients);
     }
+
     
 }
