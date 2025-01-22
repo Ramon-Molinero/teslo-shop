@@ -17,5 +17,9 @@ export class MessagesWsService {
     removeClient ( client: Socket){
         delete this.connectedClients[client.id];
     }
+
+    getConnectedClients(): string[]{
+        return Object.keys(this.connectedClients);
+    }
     
 }
