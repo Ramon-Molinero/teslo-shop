@@ -17,6 +17,7 @@ API RESTful diseñada para manejar productos, usuarios y pedidos en la plataform
 - 📡 **WebSockets**: Comunicación en tiempo real mediante **Socket.IO** para notificaciones y chat.
 - 📁 **Carga de archivos**: Subida y gestión de archivos de producto.
 - 🛠️ **Despliegue y documentación automática**: Desplegada en **Render** con documentación Swagger disponible en:
+  
   ```
   https://teslo-shop-nest-iv2l.onrender.com/api
   ```
@@ -27,6 +28,7 @@ API RESTful diseñada para manejar productos, usuarios y pedidos en la plataform
 
 - **Node.js** y **npm** instalados.
 - **Nest CLI** instalado:
+  
   ```bash
   npm i -g @nestjs/cli
   ```
